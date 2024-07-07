@@ -7,9 +7,9 @@ internal class Player(string name, (int, int) startingPosition)
 
     public (int, int) GetPosition() => Position;
 
-    public void Move(GameMap map, ConsoleKey key)
+    public void Move(Map map, ConsoleKey key)
     {
-        var newPosition = GameMap.CalculateNewPosition(Position, key);
+        var newPosition = Map.CalculateNewPosition(Position, key);
         if (map.IsValidPosition(newPosition))
         {
             Position = newPosition;
