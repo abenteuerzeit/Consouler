@@ -6,11 +6,7 @@ internal enum MapCodes
 {
     Undefined,
     Player,
-    Friend,
-    Enemy,
     Path,
-    SlowPath,
-    FastPath,
     Obstacle,
     Exit,
     Breadcrumb
@@ -20,25 +16,10 @@ internal class GraphicsConfig
 {
     public char Undefined { get; set; } = ' ';
     public char Path { get; set; } = '░';
-    public char SlowPath { get; set; } = '░';
-    public char FastPath { get; set; } = '▒';
     public char Player { get; set; } = '⚔';
-    public char Friend { get; set; } = '☺';
-    public char Enemy { get; set; } = '☠';
     public char Obstacle { get; set; } = '█';
     public char Exit { get; set; } = '·';
     public char Breadcrumb { get; set; } = '•';
-    public char PathHorizontal { get; set; } = '═';
-    public char PathVertical { get; set; } = '║';
-    public char PathCross { get; set; } = '╬';
-    public char PathUpRight { get; set; } = '╚';
-    public char PathUpLeft { get; set; } = '╝';
-    public char PathDownRight { get; set; } = '╔';
-    public char PathDownLeft { get; set; } = '╗';
-    public char PathTUp { get; set; } = '╩';
-    public char PathTDown { get; set; } = '╦';
-    public char PathTLeft { get; set; } = '╣';
-    public char PathTRight { get; set; } = '╠';
     public char BorderTopLeft { get; set; } = '┌';
     public char BorderTopRight { get; set; } = '┐';
     public char BorderBottomLeft { get; set; } = '└';
@@ -50,7 +31,6 @@ internal class GraphicsConfig
     {
         Console.OutputEncoding = Encoding.UTF8;
     }
-
 }
 
 internal class Map
@@ -84,13 +64,13 @@ internal class Map
         }
 
         LevelData[coordinates.x][coordinates.y] = (int)code;
-        return LevelData[coordinates.x][coordinates.y] == (int)code;
+        return true;
     }
 
     public bool IsValidPosition((int x, int y) coordinates)
     {
-        return !(coordinates.x < 0 || coordinates.y < 0) &&
-               !(coordinates.x >= LevelData.Length || coordinates.y >= LevelData[0].Length) &&
+        return coordinates.x >= 0 && coordinates.y >= 0 &&
+               coordinates.x < LevelData.Length && coordinates.y < LevelData[0].Length &&
                LevelData[coordinates.x][coordinates.y] != (int)MapCodes.Obstacle;
     }
 
@@ -106,14 +86,12 @@ internal class Map
         };
     }
 
-
     public void GenerateRandomMap()
     {
         ClearMap();
         GenerateMaze();
         ConnectRooms();
         PlacePlayer();
-        PlaceFriendsAndEnemies();
         PlaceExits();
         PlaceBreadcrumbs();
     }
@@ -211,34 +189,6 @@ internal class Map
         LevelData[position.x][position.y] = (int)MapCodes.Player;
     }
 
-    private void PlaceFriendsAndEnemies()
-    {
-        int width = LevelData[0].Length;
-        int height = LevelData.Length;
-        int count = (int)(width * height * 0.05);
-
-        for (int i = 0; i < count; i++)
-        {
-            PlaceEntity(MapCodes.Friend);
-            PlaceEntity(MapCodes.Enemy);
-        }
-    }
-
-    private void PlaceEntity(MapCodes entityType)
-    {
-        (int x, int y) position;
-        do
-        {
-            position = (random.Next(1, LevelData.Length - 1), random.Next(1, LevelData[0].Length - 1));
-        } while (LevelData[position.x][position.y] != (int)MapCodes.Undefined &&
-                 LevelData[position.x][position.y] != (int)MapCodes.Path &&
-                 LevelData[position.x][position.y] != (int)MapCodes.SlowPath &&
-                 LevelData[position.x][position.y] != (int)MapCodes.FastPath);
-
-        LevelData[position.x][position.y] = (int)entityType;
-    }
-
-
     private void PlaceExits()
     {
         exits.Clear();
@@ -271,7 +221,7 @@ internal class Map
     {
         int[][] directions = new int[][]
         {
-        new int[] {-1, 0}, new int[] {1, 0}, new int[] {0, -1}, new int[] {0, 1}
+            new int[] {-1, 0}, new int[] {1, 0}, new int[] {0, -1}, new int[] {0, 1}
         };
 
         foreach (var dir in directions)
@@ -308,30 +258,7 @@ internal class Map
         }
     }
 
-    public void PlaceBreadcrumbs(bool isNearest = false)
-    {
-        if (isNearest) PlaceBreadcrumbsToNearestExit();
-        else PlaceBreadcrumbsToAllExits();
-    }
-
-
-    private void PlaceBreadcrumbsToNearestExit()
-    {
-        var playerPosition = GetPlayerPosition();
-        if (playerPosition == (-1, -1)) return;
-
-        var pathToExit = FindPathToNearestExit(playerPosition);
-
-        foreach (var position in pathToExit)
-        {
-            if (LevelData[position.Item1][position.Item2] == (int)MapCodes.Undefined)
-            {
-                LevelData[position.Item1][position.Item2] = (int)MapCodes.Breadcrumb;
-            }
-        }
-    }
-
-    private void PlaceBreadcrumbsToAllExits()
+    public void PlaceBreadcrumbs()
     {
         var playerPosition = GetPlayerPosition();
         if (playerPosition == (-1, -1)) return;
@@ -350,35 +277,6 @@ internal class Map
         }
     }
 
-    private List<(int, int)> FindPathToExit((int x, int y) start, (int x, int y) exit)
-    {
-        var queue = new Queue<(int x, int y)>();
-        var visited = new Dictionary<(int, int), (int, int)>();
-        queue.Enqueue(start);
-        visited[start] = start;
-
-        while (queue.Count > 0)
-        {
-            var current = queue.Dequeue();
-
-            if (current == exit)
-            {
-                return ReconstructPath(visited, start, current);
-            }
-
-            foreach (var neighbor in GetValidNeighbors(current))
-            {
-                if (!visited.ContainsKey(neighbor))
-                {
-                    visited[neighbor] = current;
-                    queue.Enqueue(neighbor);
-                }
-            }
-        }
-
-        return [];
-    }
-
     public (int, int) GetPlayerPosition()
     {
         for (int r = 0; r < LevelData.Length; r++)
@@ -394,7 +292,7 @@ internal class Map
         return (-1, -1);
     }
 
-    private List<(int, int)> FindPathToNearestExit((int x, int y) start)
+    private List<(int, int)> FindPathToExit((int x, int y) start, (int x, int y) exit)
     {
         var queue = new Queue<(int x, int y)>();
         var visited = new Dictionary<(int, int), (int, int)>();
@@ -405,7 +303,7 @@ internal class Map
         {
             var current = queue.Dequeue();
 
-            if (IsExit(current))
+            if (current == exit)
             {
                 return ReconstructPath(visited, start, current);
             }
@@ -462,7 +360,6 @@ internal class Map
 
     public bool IsExit((int x, int y) position) => exits.Contains(position);
 
-
     public string Render(bool showBreadcrumbs = false)
     {
         var sb = new StringBuilder();
@@ -485,16 +382,8 @@ internal class Map
                     case MapCodes.Player:
                         sb.Append(graphics.Player);
                         break;
-                    case MapCodes.Friend:
-                        sb.Append(graphics.Friend);
-                        break;
-                    case MapCodes.Enemy:
-                        sb.Append(graphics.Enemy);
-                        break;
                     case MapCodes.Path:
-                    case MapCodes.SlowPath:
-                    case MapCodes.FastPath:
-                        sb.Append(GetPathChar(r, c));
+                        sb.Append(graphics.Path);
                         break;
                     case MapCodes.Obstacle:
                         sb.Append(graphics.Obstacle);
@@ -514,35 +403,6 @@ internal class Map
         }
         sb.AppendLine(graphics.BorderBottomLeft + borderTopBottom + graphics.BorderBottomRight);
         return sb.ToString();
-    }
-
-
-    private char GetPathChar(int r, int c)
-    {
-        bool up = r > 0 && IsPath(LevelData[r - 1][c]);
-        bool down = r < LevelData.Length - 1 && IsPath(LevelData[r + 1][c]);
-        bool left = c > 0 && IsPath(LevelData[r][c - 1]);
-        bool right = c < LevelData[0].Length - 1 && IsPath(LevelData[r][c + 1]);
-
-        if (up && down && left && right) return graphics.PathCross;
-        if (up && down && left) return graphics.PathTLeft;
-        if (up && down && right) return graphics.PathTRight;
-        if (left && right && up) return graphics.PathTUp;
-        if (left && right && down) return graphics.PathTDown;
-        if (up && down) return graphics.PathVertical;
-        if (left && right) return graphics.PathHorizontal;
-        if (up && left) return graphics.PathUpLeft;
-        if (up && right) return graphics.PathUpRight;
-        if (down && left) return graphics.PathDownLeft;
-        if (down && right) return graphics.PathDownRight;
-        if (up || down) return graphics.PathVertical;
-        if (left || right) return graphics.PathHorizontal;
-        return graphics.Undefined;
-    }
-
-    private static bool IsPath(int code)
-    {
-        return code == (int)MapCodes.Path || code == (int)MapCodes.SlowPath || code == (int)MapCodes.FastPath;
     }
 
     public void Save(string fileName)
@@ -576,18 +436,16 @@ internal class Map
     }
 }
 
-
 class Editor(Map map)
 {
     private (int x, int y) cursorPosition = (0, 0);
-    private readonly Map gameMap = map;
 
     public void Run()
     {
         while (true)
         {
             Console.Clear();
-            Console.WriteLine(gameMap.Render());
+            Console.WriteLine(map.Render());
             DisplayEditorMenu();
             Console.SetCursorPosition(cursorPosition.y + 1, cursorPosition.x + 1);
 
@@ -610,15 +468,12 @@ class Editor(Map map)
 
     private static void DisplayEditorMenu()
     {
-        Console.WriteLine("Editor Mode: Use arrow keys to move, 1-8 to place tiles, S to save, Q to quit");
+        Console.WriteLine("Editor Mode: Use arrow keys to move, 1-5 to place tiles, S to save, Q to quit");
         Console.WriteLine("1 => Player");
-        Console.WriteLine("2 => Friend");
-        Console.WriteLine("3 => Enemy");
-        Console.WriteLine("4 => Path");
-        Console.WriteLine("5 => SlowPath");
-        Console.WriteLine("6 => FastPath");
-        Console.WriteLine("7 => Obstacle");
-        Console.WriteLine("8 => Exit");
+        Console.WriteLine("2 => Path");
+        Console.WriteLine("3 => Obstacle");
+        Console.WriteLine("4 => Exit");
+        Console.WriteLine("5 => Undefined");
     }
 
     private void SaveMap()
@@ -632,7 +487,7 @@ class Editor(Map map)
 
         try
         {
-            gameMap.Save(fileName);
+            map.Save(fileName);
             Console.WriteLine($"Map saved to {fileName}");
         }
         catch (Exception ex)
@@ -650,7 +505,7 @@ class Editor(Map map)
     private void MoveCursor(ConsoleKey key)
     {
         var newPosition = Map.CalculateNewPosition(cursorPosition, key);
-        if (gameMap.IsValidPosition(newPosition))
+        if (map.IsValidPosition(newPosition))
         {
             cursorPosition = newPosition;
         }
@@ -661,20 +516,17 @@ class Editor(Map map)
         MapCodes? tile = key switch
         {
             ConsoleKey.D1 => MapCodes.Player,
-            ConsoleKey.D2 => MapCodes.Friend,
-            ConsoleKey.D3 => MapCodes.Enemy,
-            ConsoleKey.D4 => MapCodes.Path,
-            ConsoleKey.D5 => MapCodes.SlowPath,
-            ConsoleKey.D6 => MapCodes.FastPath,
-            ConsoleKey.D7 => MapCodes.Obstacle,
-            ConsoleKey.D8 => MapCodes.Exit,
+            ConsoleKey.D2 => MapCodes.Path,
+            ConsoleKey.D3 => MapCodes.Obstacle,
+            ConsoleKey.D4 => MapCodes.Exit,
+            ConsoleKey.D5 => MapCodes.Undefined,
             _ => null
         };
 
         if (tile.HasValue)
         {
-            gameMap.UpdateMapData(cursorPosition, tile.Value);
-            gameMap.PlaceBreadcrumbs();
+            map.UpdateMapData(cursorPosition, tile.Value);
+            map.PlaceBreadcrumbs();
         }
     }
 }

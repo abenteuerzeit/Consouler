@@ -11,20 +11,16 @@ internal class Game
         var mapSize = (height: 30, width: 30);
         var graphicsConfig = new GraphicsConfig
         {
-            Player = 'X',
-            Friend = ' ', // TODO: implement gameplay logic
-            Enemy = ' '
+            Player = 'X'
         };
         map = new Map(mapSize, graphicsConfig);
         map.GenerateRandomMap();
-        player = new Player("Adrian", map.GetPlayerPosition());
+        player = new Player(map.GetPlayerPosition());
     }
 
     public bool Run()
     {
-        bool isRunning = true;
-
-        while (isRunning)
+        while (true)
         {
             Console.Clear();
             Console.WriteLine("Press E to enter editor mode, G to play game, B to toggle breadcrumbs, Q to quit");
@@ -34,7 +30,7 @@ internal class Game
             if (map.IsExit(player.GetPosition()))
             {
                 Console.WriteLine("You found the exit!");
-                return true; // return to menu
+                return true;
             }
 
             var key = Console.ReadKey().Key;
@@ -58,10 +54,7 @@ internal class Game
             }
 
             map.UpdateMapData(player.GetPosition(), MapCodes.Player);
-
         }
-
-        return isRunning;
     }
 
     private void EnterEditorMode()
@@ -75,7 +68,7 @@ internal class Game
         while (true)
         {
             Console.Clear();
-            Console.WriteLine("Press E to enter editor mode, G to play game, Q to quit");
+            Console.WriteLine("Press Q to quit");
             Console.WriteLine(map.Render(showBreadcrumbs));
             map.UpdateMapData(player.GetPosition(), MapCodes.Undefined);
 

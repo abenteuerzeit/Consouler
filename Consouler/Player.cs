@@ -1,8 +1,7 @@
-﻿namespace Consouler;
+﻿using Consouler;
 
-internal class Player(string name, (int, int) startingPosition)
+internal class Player((int, int) startingPosition)
 {
-    public string Name { get; } = name;
     private (int x, int y) Position { get; set; } = startingPosition;
 
     public (int, int) GetPosition() => Position;
