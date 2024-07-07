@@ -12,26 +12,6 @@ internal enum MapCodes
     Breadcrumb
 }
 
-internal class GraphicsConfig
-{
-    public char Undefined { get; set; } = ' ';
-    public char Path { get; set; } = '░';
-    public char Player { get; set; } = '⚔';
-    public char Obstacle { get; set; } = '█';
-    public char Exit { get; set; } = '·';
-    public char Breadcrumb { get; set; } = '•';
-    public char BorderTopLeft { get; set; } = '┌';
-    public char BorderTopRight { get; set; } = '┐';
-    public char BorderBottomLeft { get; set; } = '└';
-    public char BorderBottomRight { get; set; } = '┘';
-    public char BorderHorizontal { get; set; } = '─';
-    public char BorderVertical { get; set; } = '│';
-
-    public GraphicsConfig()
-    {
-        Console.OutputEncoding = Encoding.UTF8;
-    }
-}
 
 internal class Map
 {
@@ -219,10 +199,7 @@ internal class Map
 
     private bool HasAdjacentUndefinedTile(int x, int y)
     {
-        int[][] directions = new int[][]
-        {
-            new int[] {-1, 0}, new int[] {1, 0}, new int[] {0, -1}, new int[] {0, 1}
-        };
+        int[][] directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
         foreach (var dir in directions)
         {
@@ -434,99 +411,9 @@ internal class Map
             }
         }
     }
-}
 
-class Editor(Map map)
-{
-    private (int x, int y) cursorPosition = (0, 0);
-
-    public void Run()
+    public (int width, int height) GetSize()
     {
-        while (true)
-        {
-            Console.Clear();
-            Console.WriteLine(map.Render());
-            DisplayEditorMenu();
-            Console.SetCursorPosition(cursorPosition.y + 1, cursorPosition.x + 1);
-
-            var key = Console.ReadKey(true).Key;
-
-            if (key == ConsoleKey.Q)
-            {
-                break;
-            }
-            else if (key == ConsoleKey.S)
-            {
-                SaveMap();
-            }
-            else
-            {
-                HandleEditorInput(key);
-            }
-        }
-    }
-
-    private static void DisplayEditorMenu()
-    {
-        Console.WriteLine("Editor Mode: Use arrow keys to move, 1-5 to place tiles, S to save, Q to quit");
-        Console.WriteLine("1 => Player");
-        Console.WriteLine("2 => Path");
-        Console.WriteLine("3 => Obstacle");
-        Console.WriteLine("4 => Exit");
-        Console.WriteLine("5 => Undefined");
-    }
-
-    private void SaveMap()
-    {
-        Console.Write("Enter filename to save: ");
-        var fileName = Console.ReadLine()?.Trim();
-        if (string.IsNullOrEmpty(fileName))
-        {
-            fileName = $"map-{DateTime.Now:yyyyMMddHHmmss}";
-        }
-
-        try
-        {
-            map.Save(fileName);
-            Console.WriteLine($"Map saved to {fileName}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error saving map: {ex.Message}");
-        }
-    }
-
-    private void HandleEditorInput(ConsoleKey key)
-    {
-        MoveCursor(key);
-        PlaceTile(key);
-    }
-
-    private void MoveCursor(ConsoleKey key)
-    {
-        var newPosition = Map.CalculateNewPosition(cursorPosition, key);
-        if (map.IsValidPosition(newPosition))
-        {
-            cursorPosition = newPosition;
-        }
-    }
-
-    private void PlaceTile(ConsoleKey key)
-    {
-        MapCodes? tile = key switch
-        {
-            ConsoleKey.D1 => MapCodes.Player,
-            ConsoleKey.D2 => MapCodes.Path,
-            ConsoleKey.D3 => MapCodes.Obstacle,
-            ConsoleKey.D4 => MapCodes.Exit,
-            ConsoleKey.D5 => MapCodes.Undefined,
-            _ => null
-        };
-
-        if (tile.HasValue)
-        {
-            map.UpdateMapData(cursorPosition, tile.Value);
-            map.PlaceBreadcrumbs();
-        }
+        return (LevelData[0].Length, LevelData.Length);
     }
 }
