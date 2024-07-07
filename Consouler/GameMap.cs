@@ -15,14 +15,43 @@ internal enum MapCodes
     Passage
 }
 
+internal class GraphicsConfig
+{
+    public char Undefined { get; set; } = '░';
+    public char Player { get; set; } = '⚔';
+    public char Friend { get; set; } = '☺';
+    public char Enemy { get; set; } = '☠';
+    public char Obstacle { get; set; } = '█';
+    public char Passage { get; set; } = '·';
+    public char PathHorizontal { get; set; } = '═';
+    public char PathVertical { get; set; } = '║';
+    public char PathCross { get; set; } = '╬';
+    public char PathUpRight { get; set; } = '╚';
+    public char PathUpLeft { get; set; } = '╝';
+    public char PathDownRight { get; set; } = '╔';
+    public char PathDownLeft { get; set; } = '╗';
+    public char PathTUp { get; set; } = '╩';
+    public char PathTDown { get; set; } = '╦';
+    public char PathTLeft { get; set; } = '╣';
+    public char PathTRight { get; set; } = '╠';
+    public char BorderTopLeft { get; set; } = '┌';
+    public char BorderTopRight { get; set; } = '┐';
+    public char BorderBottomLeft { get; set; } = '└';
+    public char BorderBottomRight { get; set; } = '┘';
+    public char BorderHorizontal { get; set; } = '─';
+    public char BorderVertical { get; set; } = '│';
+}
+
 internal class GameMap
 {
+    private readonly GraphicsConfig graphics;
     private int[][] LevelData { get; set; }
     private static readonly Random random = new();
     private (int, int) playerPlacement;
 
-    public GameMap(int width, int height = 30)
+    public GameMap((int, int) size, GraphicsConfig? graphicsConfig = null)
     {
+        (int width, int height) = size;
         LevelData = new int[height][];
         for (int r = 0; r < height; r++)
         {
@@ -32,6 +61,8 @@ internal class GameMap
                 LevelData[r][c] = (int)MapCodes.Undefined;
             }
         }
+
+        graphics = graphicsConfig ?? new GraphicsConfig();
     }
 
     public bool UpdateMapData((int x, int y) coordinates, MapCodes code)
@@ -198,11 +229,10 @@ internal class GameMap
     {
         var sb = new StringBuilder();
 
-        var borderTopBottom = new string('-', LevelData[0].Length);
-        var borderSide = "|";
+        var borderTopBottom = new string(graphics.BorderHorizontal, LevelData[0].Length);
+        var borderSide = graphics.BorderVertical.ToString();
 
-        sb.AppendLine('/' + borderTopBottom + '\\');
-        // draw map
+        sb.AppendLine(graphics.BorderTopLeft + borderTopBottom + graphics.BorderTopRight);
         for (int r = 0; r < LevelData.Length; r++)
         {
             sb.Append(borderSide);
@@ -211,31 +241,27 @@ internal class GameMap
                 switch (LevelData[r][c])
                 {
                     case (int)MapCodes.Undefined:
-                        sb.Append(' '); // Empty space
+                        sb.Append(graphics.Undefined);
                         break;
                     case (int)MapCodes.Player:
-                        sb.Append('X'); // Player
+                        sb.Append(graphics.Player);
                         break;
                     case (int)MapCodes.Friend:
-                        sb.Append('f'); // Friend
+                        sb.Append(graphics.Friend);
                         break;
                     case (int)MapCodes.Enemy:
-                        sb.Append('3'); // Enemy
+                        sb.Append(graphics.Enemy);
                         break;
                     case (int)MapCodes.Path:
-                        sb.Append('='); // Path
-                        break;
                     case (int)MapCodes.SlowPath:
-                        sb.Append('~'); // Slow Path
-                        break;
                     case (int)MapCodes.FastPath:
-                        sb.Append('>'); // Fast Path
+                        sb.Append(GetPathChar(r, c));
                         break;
                     case (int)MapCodes.Obstacle:
-                        sb.Append('#'); // Obstacle
+                        sb.Append(graphics.Obstacle);
                         break;
                     case (int)MapCodes.Passage:
-                        sb.Append('.'); // Passage
+                        sb.Append(graphics.Passage);
                         break;
                     default:
                         throw new NotImplementedException($"I don't know how to render the code {LevelData[r][c]}.");
@@ -244,27 +270,54 @@ internal class GameMap
             sb.Append(borderSide);
             sb.AppendLine();
         }
-        sb.AppendLine('\\' + borderTopBottom + '/');
+        sb.AppendLine(graphics.BorderBottomLeft + borderTopBottom + graphics.BorderBottomRight);
         return sb.ToString();
     }
+
+    private char GetPathChar(int r, int c)
+    {
+        bool up = r > 0 && IsPath(LevelData[r - 1][c]);
+        bool down = r < LevelData.Length - 1 && IsPath(LevelData[r + 1][c]);
+        bool left = c > 0 && IsPath(LevelData[r][c - 1]);
+        bool right = c < LevelData[0].Length - 1 && IsPath(LevelData[r][c + 1]);
+
+        if (up && down && left && right) return graphics.PathCross;
+        if (up && down && left) return graphics.PathTLeft;
+        if (up && down && right) return graphics.PathTRight;
+        if (left && right && up) return graphics.PathTUp;
+        if (left && right && down) return graphics.PathTDown;
+        if (up && down) return graphics.PathVertical;
+        if (left && right) return graphics.PathHorizontal;
+        if (up && left) return graphics.PathUpLeft;
+        if (up && right) return graphics.PathUpRight;
+        if (down && left) return graphics.PathDownLeft;
+        if (down && right) return graphics.PathDownRight;
+        if (up || down) return graphics.PathVertical;
+        if (left || right) return graphics.PathHorizontal;
+        return graphics.Undefined;
+    }
+
+    private static bool IsPath(int code)
+    {
+        return code == (int)MapCodes.Path || code == (int)MapCodes.SlowPath || code == (int)MapCodes.FastPath;
+    }
+
 
 
     public void Save(string fileName)
     {
-        using (var writer = new StreamWriter(fileName))
+        using var writer = new StreamWriter(fileName);
+        for (int r = 0; r < LevelData.Length; r++)
         {
-            for (int r = 0; r < LevelData.Length; r++)
+            for (int c = 0; c < LevelData[0].Length; c++)
             {
-                for (int c = 0; c < LevelData[0].Length; c++)
+                writer.Write(LevelData[r][c]);
+                if (c < LevelData[0].Length - 1)
                 {
-                    writer.Write(LevelData[r][c]);
-                    if (c < LevelData[0].Length - 1)
-                    {
-                        writer.Write(",");
-                    }
+                    writer.Write(",");
                 }
-                writer.WriteLine();
             }
+            writer.WriteLine();
         }
     }
 
@@ -285,7 +338,7 @@ internal class GameMap
 internal class Editor(GameMap map)
 {
     private (int x, int y) cursorPosition = (0, 0);
-    private GameMap gameMap = map;
+    private readonly GameMap gameMap = map;
 
     public void Run()
     {

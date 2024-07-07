@@ -1,11 +1,20 @@
-﻿namespace Consouler;
+﻿using System.Text;
+
+namespace Consouler;
 
 internal class Program
 {
     static void Main(string[] args)
     {
+        Console.OutputEncoding = Encoding.UTF8;
         Console.WriteLine("Consouler");
-        var gameMap = new GameMap(150);
+
+        var mapSize = (height: 120, width: 20);
+        var graphicsConfig = new GraphicsConfig
+        {
+            Player = 'X'
+        };
+        var gameMap = new GameMap(mapSize, graphicsConfig);
         gameMap.GenerateRandomMap();
         var player = new Player("Adrian", gameMap.GetPlayerInit());
 
